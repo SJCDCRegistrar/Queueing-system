@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registrar Transaction Queue — St. Jude College</title>
+<link rel="icon" href="/logo.png">
+<style>
+  :root{
+    --navy:#1F4E43;
+    --navy-2:#163A31;
+    --paper:#EEF2EF;
+    --panel:#FFFFFF;
+    --amber:#D9A916;
+    --amber-ink:#4A3607;
+    --teal:#2E67A6;
+    --red:#B0473F;
+    --ink:#182B24;
+    --muted:#5C6E68;
+    --line:#D7E0DB;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);
+    background:var(--paper);
+    min-height:100vh;
+  }
+  #app{min-height:100vh;display:flex;flex-direction:column;}
+  .ticket-num{
+    font-family:Rockwell,"Roboto Slab",Georgia,serif;
+    font-variant-numeric:tabular-nums;
+    letter-spacing:0.02em;
+  }
+  header.rq-header{
+    background:var(--navy);
+    color:#fff;
+    padding:14px 20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .rq-brand{display:flex;align-items:center;gap:12px;}
+  .rq-brand .logo-panel{background:#fff;border-radius:8px;padding:6px 12px;display:flex;align-items:center;}
+  .rq-brand .logo-panel img{height:34px;width:auto;display:block;}
+  .rq-brand .brand-text{line-height:1.2;}
+  .rq-brand .eyebrow{font-size:11px;color:#BFD6CD;letter-spacing:0.04em;}
+  .rq-brand .title{font-size:17px;font-weight:600;}
+  .conn-dot{width:8px;height:8px;border-radius:50%;background:#7ED08A;display:inline-block;margin-right:6px;}
+  .conn-dot.off{background:#D96A5F;}
+  .conn-label{font-size:11.5px;color:#CFE0DA;display:flex;align-items:center;}
+
+  nav.rq-tabs{display:flex;gap:6px;}
+  nav.rq-tabs button{
+    background:transparent;border:1px solid rgba(255,255,255,0.28);color:#E4EFEA;
+    padding:7px 13px;border-radius:7px;font-size:13px;cursor:pointer;
+    transition:background 0.15s,color 0.15s;
+  }
+  nav.rq-tabs button:hover{background:rgba(255,255,255,0.10);}
+  nav.rq-tabs button.active{background:var(--amber);border-color:var(--amber);color:#3A2A06;font-weight:600;}
+
+  main{flex:1;padding:26px 22px 40px;max-width:1040px;margin:0 auto;width:100%;}
+
+  .kiosk-intro{text-align:center;margin-bottom:26px;}
+  .kiosk-intro h1{font-size:26px;margin:0 0 6px;font-weight:600;}
+  .kiosk-intro p{color:var(--muted);margin:0;font-size:14.5px;}
+  .type-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
+  .type-card{
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:20px 18px;text-align:left;cursor:pointer;
+    transition:transform 0.12s,box-shadow 0.12s,border-color 0.12s;
+    display:flex;gap:14px;align-items:center;
+  }
+  .type-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(31,78,67,0.12);border-color:#BFD6CD;}
+  .type-card:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+  .type-card .prefix-badge{
+    width:44px;height:44px;border-radius:8px;background:var(--navy);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-family:Rockwell,"Roboto Slab",Georgia,serif;font-size:19px;font-weight:700;flex-shrink:0;
+  }
+  .type-card .type-name{font-size:15px;font-weight:600;margin-bottom:2px;}
+  .type-card .type-waiting{font-size:12.5px;color:var(--muted);}
+
+  .ticket-overlay{
+    position:fixed;inset:0;background:rgba(22,35,61,0.55);
+    display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;
+  }
+  .ticket-stub{
+    background:#fff;width:320px;max-width:100%;border-radius:4px;position:relative;
+    padding:30px 26px 26px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.25);
+  }
+  .ticket-stub::before,.ticket-stub::after{
+    content:"";position:absolute;left:0;right:0;height:16px;
+    background:radial-gradient(circle at 10px 0, transparent 8px, #fff 8.5px) top left/20px 16px repeat-x;
+  }
+  .ticket-stub::before{top:-8px;transform:rotate(180deg);
+    background:radial-gradient(circle at 10px 16px, transparent 8px, #fff 8.5px) bottom left/20px 16px repeat-x;}
+  .ticket-stub::after{bottom:-8px;}
+  .ticket-stub .stub-label{font-size:12px;letter-spacing:0.05em;color:var(--muted);margin-bottom:10px;}
+  .ticket-stub .stub-number{font-size:56px;font-weight:700;color:var(--navy);margin:0 0 6px;}
+  .ticket-stub .stub-type{font-size:14px;color:var(--ink);margin-bottom:16px;}
+  .ticket-stub .stub-wait{background:var(--paper);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--muted);margin-bottom:18px;}
+  .ticket-stub .stub-wait b{color:var(--ink);}
+  .btn-primary{background:var(--navy);color:#fff;border:none;border-radius:8px;padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer;width:100%;}
+  .btn-primary:hover{background:var(--navy-2);}
+
+  .staff-top{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap;}
+  .staff-top label{font-size:13px;color:var(--muted);}
+  .window-select{display:flex;gap:6px;}
+  .window-select button{border:1px solid var(--line);background:#fff;color:var(--ink);padding:7px 14px;border-radius:7px;cursor:pointer;font-size:14px;}
+  .window-select button.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+  .serving-card{
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:26px;
+    display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:22px;flex-wrap:wrap;
+  }
+  .serving-card .num{font-size:46px;font-weight:700;color:var(--navy);}
+  .serving-card .meta{font-size:13.5px;color:var(--muted);margin-top:4px;}
+  .serving-empty{color:var(--muted);font-size:14px;}
+  .serving-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .btn{border:none;border-radius:8px;padding:10px 16px;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .btn-call{background:var(--amber);color:#4A3607;}
+  .btn-complete{background:var(--teal);color:#fff;}
+  .btn-skip{background:#fff;color:var(--red);border:1px solid var(--red);}
+
+  .queue-list-title{font-size:13px;color:var(--muted);margin:0 0 10px;}
+  .queue-row{display:flex;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:11px 15px;margin-bottom:8px;font-size:14px;}
+  .queue-row .qn{font-weight:700;color:var(--navy);width:64px;}
+  .queue-row .qt{color:var(--muted);flex:1;}
+  .queue-row .qw{color:var(--muted);font-size:12.5px;}
+  .empty-note{color:var(--muted);font-size:13.5px;padding:14px 0;}
+
+  .board-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:30px;}
+  .board-window{background:var(--navy);color:#fff;border-radius:12px;padding:22px 18px;text-align:center;}
+  .board-window .wlabel{font-size:12px;color:#B9CFC6;margin-bottom:10px;}
+  .board-window .wnum{font-size:42px;font-weight:700;}
+  .board-window.idle{background:#2E4A40;}
+  .board-window .wnum.idle-text{font-size:20px;color:#8FA69C;font-weight:500;}
+
+  .upnext-title{font-size:13px;color:var(--muted);margin-bottom:10px;}
+  .upnext-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .upnext-chip{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:8px 16px;font-size:14px;font-weight:600;color:var(--ink);}
+  .upnext-chip span{color:var(--muted);font-weight:400;margin-left:6px;}
+
+  footer.rq-footer{text-align:center;color:var(--muted);font-size:11.5px;padding:14px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(function(){
+  let TYPES = [];
+  let WINDOWS = [];
+  let state = { date:'', counters:{}, tickets:[], windows:{} };
+  let view = (location.hash || '#kiosk').replace('#','');
+  if(!['kiosk','staff','board'].includes(view)) view = 'kiosk';
+  let staffWindow = null;
+  let activeTicket = null;
+  let connected = false;
+  let socket = null;
+
+  window.addEventListener('hashchange', ()=>{
+    const v = (location.hash||'#kiosk').replace('#','');
+    if(['kiosk','staff','board'].includes(v)){ view = v; render(); }
+  });
+
+  function setView(v){ view=v; location.hash = v; render(); }
+
+  async function api(path, opts){
+    const res = await fetch(path, Object.assign({headers:{'Content-Type':'application/json'}}, opts||{}));
+    if(!res.ok) throw new Error('Request failed: '+path);
+    return res.json();
+  }
+
+  async function takeTicket(prefix){
+    const ticket = await api('/api/ticket', {method:'POST', body: JSON.stringify({prefix})});
+    activeTicket = ticket;
+    render();
+  }
+  async function callNext(win){ await api('/api/call', {method:'POST', body: JSON.stringify({window:win})}); }
+  async function completeTicket(win){ await api('/api/complete', {method:'POST', body: JSON.stringify({window:win})}); }
+  async function skipTicket(win){ await api('/api/skip', {method:'POST', body: JSON.stringify({window:win})}); }
+
+  function waitingTickets(){
+    return state.tickets.filter(t=>t.status==='waiting').sort((a,b)=>a.createdAt-b.createdAt);
+  }
+  function servingAt(win){
+    const id = state.windows[win] && state.windows[win].ticketId;
+    if(!id) return null;
+    return state.tickets.find(t=>t.id===id) || null;
+  }
+  function minutesAgo(ts){
+    if(!ts) return '';
+    const m = Math.max(0, Math.round((Date.now()-ts)/60000));
+    return m<1 ? 'just now' : (m+'m ago');
+  }
+
+  function el(tag, attrs, ...children){
+    const e = document.createElement(tag);
+    if(attrs) for(const k in attrs){
+      if(k==='class') e.className=attrs[k];
+      else if(k.startsWith('on') && typeof attrs[k]==='function') e.addEventListener(k.slice(2), attrs[k]);
+      else e.setAttribute(k, attrs[k]);
+    }
+    children.flat().forEach(c=>{
+      if(c===null||c===undefined) return;
+      e.appendChild(typeof c==='string'||typeof c==='number' ? document.createTextNode(c) : c);
+    });
+    return e;
+  }
+
+  function renderHeader(){
+    const tabs = [
+      {id:'kiosk', label:'Get a Ticket'},
+      {id:'staff', label:'Staff Window'},
+      {id:'board', label:'Now Serving Board'},
+    ];
+    return el('header',{class:'rq-header'},
+      el('div',{class:'rq-brand'},
+        el('div',{class:'logo-panel'}, el('img',{src:'/logo.png', alt:'St. Jude College — PHINMA Education'})),
+        el('div',{class:'brand-text'},
+          el('div',{class:'eyebrow'},'Office of the Registrar'),
+          el('div',{class:'title'},'Transaction Queue')
+        )
+      ),
+      el('div',{style:'display:flex;align-items:center;gap:16px;'},
+        el('div',{class:'conn-label'}, el('span',{class:'conn-dot'+(connected?'':' off')}), connected?'Live':'Reconnecting…'),
+        el('nav',{class:'rq-tabs'}, tabs.map(t=>el('button',{class:view===t.id?'active':'', onclick:()=>setView(t.id)}, t.label)))
+      )
+    );
+  }
+
+  function renderKiosk(){
+    const wrap = el('div',{});
+    wrap.appendChild(el('div',{class:'kiosk-intro'},
+      el('h1',{}, 'What do you need today?'),
+      el('p',{}, 'Tap a transaction type below to get your queue number.')
+    ));
+    const grid = el('div',{class:'type-grid'});
+    TYPES.forEach(t=>{
+      const waitingCount = waitingTickets().filter(x=>x.prefix===t.prefix).length;
+      grid.appendChild(el('button',{class:'type-card', onclick:()=>takeTicket(t.prefix)},
+        el('div',{class:'prefix-badge'}, t.prefix),
+        el('div',{},
+          el('div',{class:'type-name'}, t.name),
+          el('div',{class:'type-waiting'}, waitingCount===0 ? 'No one waiting' : (waitingCount+' waiting'))
+        )
+      ));
+    });
+    wrap.appendChild(grid);
+
+    if(activeTicket){
+      const posAhead = waitingTickets().filter(x=>x.createdAt < activeTicket.createdAt && x.id!==activeTicket.id).length;
+      const overlay = el('div',{class:'ticket-overlay', onclick:(e)=>{ if(e.target===overlay){ activeTicket=null; render(); } }},
+        el('div',{class:'ticket-stub'},
+          el('div',{class:'stub-label'}, 'YOUR QUEUE NUMBER'),
+          el('div',{class:'stub-number ticket-num'}, activeTicket.label),
+          el('div',{class:'stub-type'}, activeTicket.typeName),
+          el('div',{class:'stub-wait'}, el('b',{}, posAhead), ' waiting ahead of you'),
+          el('button',{class:'btn-primary', onclick:()=>{ activeTicket=null; render(); }}, 'Done, thanks')
+        )
+      );
+      wrap.appendChild(overlay);
+    }
+    return wrap;
+  }
+
+  function renderStaff(){
+    const wrap = el('div',{});
+    if(!staffWindow) staffWindow = WINDOWS[0];
+    wrap.appendChild(el('div',{class:'staff-top'},
+      el('label',{}, 'Your window:'),
+      el('div',{class:'window-select'}, WINDOWS.map(w=>el('button',{class:staffWindow===w?'active':'', onclick:()=>{ staffWindow=w; render(); }}, 'Window '+w)))
+    ));
+
+    const current = servingAt(staffWindow);
+    const servingCard = el('div',{class:'serving-card'});
+    if(current){
+      servingCard.appendChild(el('div',{},
+        el('div',{class:'num ticket-num'}, current.label),
+        el('div',{class:'meta'}, current.typeName+' · called '+minutesAgo(current.calledAt))
+      ));
+      servingCard.appendChild(el('div',{class:'serving-actions'},
+        el('button',{class:'btn btn-complete', onclick:()=>completeTicket(staffWindow)}, 'Complete'),
+        el('button',{class:'btn btn-skip', onclick:()=>skipTicket(staffWindow)}, 'No Show')
+      ));
+    } else {
+      servingCard.appendChild(el('div',{class:'serving-empty'}, 'No one currently at this window.'));
+      const wl = waitingTickets();
+      servingCard.appendChild(el('div',{class:'serving-actions'},
+        el('button',{class:'btn btn-call', disabled: wl.length===0 ? 'true':null, onclick:()=>callNext(staffWindow)}, 'Call Next')
+      ));
+    }
+    wrap.appendChild(servingCard);
+
+    wrap.appendChild(el('div',{class:'queue-list-title'}, 'Waiting (in order)'));
+    const wl = waitingTickets();
+    if(wl.length===0){
+      wrap.appendChild(el('div',{class:'empty-note'}, 'No one waiting right now.'));
+    } else {
+      wl.forEach(t=>{
+        wrap.appendChild(el('div',{class:'queue-row'},
+          el('div',{class:'qn ticket-num'}, t.label),
+          el('div',{class:'qt'}, t.typeName),
+          el('div',{class:'qw'}, minutesAgo(t.createdAt))
+        ));
+      });
+    }
+    return wrap;
+  }
+
+  function renderBoard(){
+    const wrap = el('div',{});
+    const grid = el('div',{class:'board-grid'});
+    WINDOWS.forEach(w=>{
+      const t = servingAt(w);
+      grid.appendChild(el('div',{class:'board-window'+(t?'':' idle')},
+        el('div',{class:'wlabel'}, 'WINDOW '+w),
+        t ? el('div',{class:'wnum ticket-num'}, t.label) : el('div',{class:'wnum idle-text'}, '—')
+      ));
+    });
+    wrap.appendChild(grid);
+
+    wrap.appendChild(el('div',{class:'upnext-title'}, 'Up next'));
+    const wl = waitingTickets().slice(0,8);
+    if(wl.length===0){
+      wrap.appendChild(el('div',{class:'empty-note'}, 'Queue is empty.'));
+    } else {
+      wrap.appendChild(el('div',{class:'upnext-row'}, wl.map(t=>el('div',{class:'upnext-chip'}, t.label, el('span',{}, ' '+t.typeName)))));
+    }
+    return wrap;
+  }
+
+  function render(){
+    const app = document.getElementById('app');
+    app.innerHTML = '';
+    app.appendChild(renderHeader());
+    const main = el('main',{});
+    if(view==='kiosk') main.appendChild(renderKiosk());
+    else if(view==='staff') main.appendChild(renderStaff());
+    else main.appendChild(renderBoard());
+    app.appendChild(main);
+    app.appendChild(el('footer',{class:'rq-footer'}, 'Live across all devices · resets automatically each day'));
+  }
+
+  async function init(){
+    const cfg = await api('/api/config');
+    TYPES = cfg.types; WINDOWS = cfg.windows;
+    state = await api('/api/state');
+    render();
+
+    socket = io();
+    socket.on('connect', ()=>{ connected = true; render(); });
+    socket.on('disconnect', ()=>{ connected = false; render(); });
+    socket.on('state', (s)=>{ state = s; render(); });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
